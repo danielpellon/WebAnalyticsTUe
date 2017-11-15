@@ -1,5 +1,6 @@
 import pandas as pd
 
-dataset = pd.read(csvpath)
+csvpath = "speed_dating_assignment.csv"
+dataset = pd.read_csv(csvpath)
 
-dataset.head
+dataset.head()
