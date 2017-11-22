@@ -36,52 +36,57 @@ cm = sns.light_palette("orange", as_cmap=True)
  )
 
 ###############QUESTION1.2############################
+###################Females############################
 # Sample containing 80% of females
-
 femaleTrain = df[df['gender'] == 0].sample(frac=0.8)
 femaleFilter = df.drop(femaleTrain.index)
 
-# Sample containing 80% of males
-maleTrain = df[df["gender"] == 1].sample(frac=0.8)
-maleTest = df.drop(maleTrain.index)
-
-# We start building the tree by defining target and predictor features
-target = femaleTrain["dec"]
-
-# femaleTest['partner_age']
-femaleTrain
-# femaleTrain['partner_age']
+# replace NaN with medians
 femaleTrain['age'].fillna(femaleTrain['age'].median(), inplace=True)
-femaleTrain['round'].fillna(femaleTrain['age'].median(), inplace=True)
+femaleTrain['round'].fillna(femaleTrain['round'].median(), inplace=True)
+femaleFilter['age'].fillna(value=femaleFilter['age'].median(), inplace=True)
+femaleFilter['round'].fillna(
+    value=femaleFilter['round'].median(), inplace=True)
 
+# Create femaleTest: a dataframe for the test without the results
+femaleTest = femaleFilter.filter(items=['age', 'round'])
 
+# Creating the decision tree
+target = femaleTrain["dec"]
 features = femaleTrain[["age", "round"]].values
-
-
-femaleTrain.describe()
-# Here is where we will controll things such as overfiting
+# Here is where we will controll things such as overfitting
 test_tree = tree.DecisionTreeClassifier()
-
 test_tree = test_tree.fit(features, target)
 
-femaleTest['age'].dropna(inplace=True)
-femaleTest['round'].dropna(inplace=True)
+# Run the tree
+predictions = test_tree.predict(femaleTest)
 
-testForTree = femaleTest.filter(items=['age', 'round'])
+# Evaluate the tree
+sk.metrics.accuracy_score(femaleFilter['dec'], predictions, normalize=True)
 
-testForTree['age'].fillna(value=20, inplace=True)
-testForTree['round'].fillna(value=20, inplace=True)
+###################Males##############################
+# Sample containing 80% of males
+maleTrain = df[df["gender"] == 1].sample(frac=0.8)
+maleFilter = df.drop(maleTrain.index)
 
-testForTree['age'].median()
+# replace NaN with medians
+maleTrain['age'].fillna(maleTrain['age'].median(), inplace=True)
+maleTrain['round'].fillna(maleTrain['round'].median(), inplace=True)
+maleFilter['age'].fillna(value=maleFilter['age'].median(), inplace=True)
+maleFilter['round'].fillna(value=maleFilter['round'].median(), inplace=True)
 
-testForTree
+# Create maleTest: a dataframe for the test without the results
+maleTest = maleFilter.filter(items=['age', 'round'])
 
-testForTree.isna().values.any()
-predictions = test_tree.predict(testForTree)
+# Creating the decision tree
+target = maleTrain["dec"]
+features = maleTrain[["age", "round"]].values
+# Here is where we will controll things such as overfitting
+test_tree = tree.DecisionTreeClassifier()
+test_tree = test_tree.fit(features, target)
 
-sk.metrics.accuracy_score(femaleTest['dec'], predictions, normalize=True)
+# Run the tree
+predictions = test_tree.predict(maleTest)
 
-comparison = femaleTest['dec']
-
-
-predictions
+# Evaluate the tree
+sk.metrics.accuracy_score(maleFilter['dec'], predictions, normalize=True)
