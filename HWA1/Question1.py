@@ -1,11 +1,15 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
 import seaborn as sns
 csvpath = "speed_dating_assignment.csv"
 df = pd.read_csv(csvpath)
-
+df
 df.head()
+
+
+###############QUESTION1############################
 
 #filter relevant columns
 df_filtered = df[['iid', 'age', 'pid', 'dec']]
@@ -22,3 +26,22 @@ df2
 
 
 pd.crosstab(df2['age_x'], df2['age_y'])#, margins=True)
+
+df[df["gender"]==0].count()
+###############QUESTION2############################
+#Sample containing 80% of females
+femaleTrain = df[df["gender"]==0].sample(frac=0.8)
+
+femaleTest = df.drop(femaleTrain.index)
+
+#Get rid of gender column
+del femaleTrain["gender"]
+
+
+
+#Sample containing 80% of males
+maleTrain = df[df["gender"]==1].sample(frac=0.8)
+
+maleTest = df.drop(maleTrain.index)
+
+del maleTrain["gender"]
