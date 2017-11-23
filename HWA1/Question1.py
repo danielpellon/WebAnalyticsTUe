@@ -5,6 +5,7 @@ from sklearn import tree
 import numpy as np
 import seaborn as sns
 import math
+import graphviz
 
 csvpath = "speed_dating_assignment.csv"
 df_import = pd.read_csv(csvpath)
@@ -40,6 +41,7 @@ def format_cells(x):
 matrix = pd.pivot_table(df, values='dec', index='age', columns='partner_age')
 
 # matrix
+#Running this line for me throws an error, but matrix still works .daniel
 cm = sns.light_palette("orange", as_cmap=True)
 (matrix.style
  .background_gradient(cmap=cm)
@@ -99,7 +101,7 @@ maleFilter['round'].fillna(value=maleFilter['round'].median(), inplace=True)
 maleTrain.fillna(0, inplace=True)
 maleFilter.fillna(0, inplace=True)
 
-# Create femaleTest: a dataframe for the test without the results
+# Create maleTest: a dataframe for the test without the results
 maleTest = maleFilter.drop(['dec'], axis=1)
 
 
@@ -108,7 +110,8 @@ target = maleTrain['dec']
 features = maleTrain.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree = tree.DecisionTreeClassifier()
+# Playing with max_depth and min_samples_split will increase/decrease accuracy
+test_tree = tree.DecisionTreeClassifier(max_depth = 2, min_samples_split = 10)
 test_tree = test_tree.fit(features, target)
 
 # Run the tree
@@ -119,7 +122,9 @@ sk.metrics.precision_score(maleFilter['dec'], predictions)
 sk.metrics.f1_score(maleFilter['dec'], predictions)
 sk.metrics.classification_report(maleFilter['dec'], predictions)
 
-import graphviz
+
 dot_data = tree.export_graphviz(test_tree, out_file=None)
 graph = graphviz.Source(dot_data)
+#Cant run this line, is it an issue with my graphviz installation
+#or is it not working? .daniel
 graph.render("iris")
