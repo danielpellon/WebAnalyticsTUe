@@ -8,7 +8,7 @@ import math
 
 csvpath = "speed_dating_assignment.csv"
 df_import = pd.read_csv(csvpath)
-df_import.replace(to_replace=',', value='', inplace=True)
+# df_import.replace(to_replace=',', value='', inplace=True)
 df_import['zipcode'] = df_import['zipcode'].str.replace(',', '')
 df_import['income'] = df_import['income'].str.replace(',', '')
 df_import['mn_sat'] = df_import['mn_sat'].str.replace(',', '')
