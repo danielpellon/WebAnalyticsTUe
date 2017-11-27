@@ -23,23 +23,19 @@ df_partners = df_partners.filter(items=['iid', 'age'])
 df_partners.rename(columns={'iid': 'pid', 'age': 'partner_age'}, inplace=True)
 df_partners = df_partners.drop_duplicates()
 df = pd.merge(df_import, df_partners, on=['pid'], how='left')
-df
+
 # generate age matrix
 df_ageMatrix = df[['iid', 'age', 'pid', 'dec', 'partner_age']]
 
-
-# onze eerste functie, Hoera structuur
+# Function to format cells for the heatmap
 def format_cells(x):
     if math.isnan(x):
         return "—"
     return "{:.0%}".format(x)
 
-
 # build a matrix with age (rows) and partner age (columns); decision rate is shown in cells
-# matrix = pd.crosstab(df_ageMatrix['age'], df_ageMatrix['partner_age'], values=df_ageMatrix['dec'], aggfunc=[matrixValue])
 matrix = pd.pivot_table(df, values='dec', index='age', columns='partner_age')
 
-# matrix
 #Running this line for me throws an error, but matrix still works .daniel
 cm = sns.light_palette("orange", as_cmap=True)
 (matrix.style
@@ -49,16 +45,16 @@ cm = sns.light_palette("orange", as_cmap=True)
  )
 
 ###############QUESTION1.2############################
-###################Females############################
 # Create new dataframe with partnerdata
 df_partners = df.copy()
 df_partners.columns = 'partner_' + df_partners.columns
 df_partners.rename(columns={'partner_iid': 'pid', 'partner_pid': 'iid'}, inplace=True)
 df_both = pd.merge(df_import, df_partners, on=['pid', 'iid'], how='left')
 
+###################Females############################
 # Sample containing 80% of females
 femaleTrain = df_both[df_both['gender'] == 0].sample(frac=0.8)
-femaleFilter = df_both.drop(femaleTrain.index)
+femaleFilter = df_both[df_both['gender'] == 0].drop(femaleTrain.index)
 femaleTrain.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
 femaleFilter.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
 femaleTrain.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
@@ -76,26 +72,31 @@ femaleFilter.fillna(0, inplace=True)
 femaleTest = femaleFilter.drop(['dec'], axis=1)
 
 # Creating the decision tree
-target = femaleTrain['dec']
-features = femaleTrain.drop(['dec'], axis=1).values
+target_f = femaleTrain['dec']
+features_f = femaleTrain.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
-test_tree = test_tree.fit(features, target)
+test_tree_f = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
+test_tree_f = test_tree_f.fit(features_f, target_f)
 
 # Run the tree
-predictions = test_tree.predict(femaleTest)
+predictions_f = test_tree_f.predict(femaleTest)
 
 # Evaluate the tree
-sk.metrics.accuracy_score(femaleFilter['dec'], predictions, normalize=True)
-sk.metrics.precision_score(femaleFilter['dec'], predictions)
-sk.metrics.f1_score(femaleFilter['dec'], predictions)
-sk.metrics.classification_report(femaleFilter['dec'], predictions)
+sk.metrics.accuracy_score(femaleFilter['dec'], predictions_f, normalize=True)
+sk.metrics.precision_score(femaleFilter['dec'], predictions_f)
+sk.metrics.f1_score(femaleFilter['dec'], predictions_f)
+sk.metrics.classification_report(femaleFilter['dec'], predictions_f)
+
+# Visualise the tree
+dot_data = tree.export_graphviz(test_tree_f, out_file=None, feature_names=femaleTrain.columns[1:], class_names=['Reject','Accept'])
+graph = graphviz.Source(dot_data)
+graph.render("test_tree_female")
 
 ###################Males##############################
 # Sample containing 80% of males
 maleTrain = df_both[df_both['gender'] == 1].sample(frac=0.8)
-maleFilter = df_both.drop(maleTrain.index)
+maleFilter = df_both[df_both['gender'] == 1].drop(maleTrain.index)
 maleTrain.drop(['field', 'undergra', 'from', 'career', 'match'], axis=1, inplace=True)
 maleFilter.drop(['field', 'undergra', 'from', 'career', 'match'], axis=1, inplace=True)
 maleTrain.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
@@ -113,35 +114,42 @@ maleFilter.fillna(0, inplace=True)
 maleTest = maleFilter.drop(['dec'], axis=1)
 
 # Creating the decision tree
-target = maleTrain['dec']
-features = maleTrain.drop(['dec'], axis=1).values
+target_m = maleTrain['dec']
+features_m = maleTrain.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
 # Playing with max_depth and min_samples_split will increase/decrease accuracy
-test_tree = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
-test_tree = test_tree.fit(features, target)
+test_tree_m = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
+test_tree_m = test_tree_m.fit(features_m, target_m)
 
 # Run the tree
-predictions = test_tree.predict(maleTest)
+predictions_m = test_tree_m.predict(maleTest)
+
 # Evaluate the tree
-sk.metrics.accuracy_score(maleFilter['dec'], predictions, normalize=True)
-sk.metrics.precision_score(maleFilter['dec'], predictions)
-sk.metrics.f1_score(maleFilter['dec'], predictions)
-sk.metrics.classification_report(maleFilter['dec'], predictions)
+sk.metrics.accuracy_score(maleFilter['dec'], predictions_m, normalize=True)
+sk.metrics.precision_score(maleFilter['dec'], predictions_m)
+sk.metrics.f1_score(maleFilter['dec'], predictions_m)
+sk.metrics.classification_report(maleFilter['dec'], predictions_m)
+
+# Visualise the tree
+dot_data = tree.export_graphviz(test_tree_m, out_file=None, feature_names=maleTrain.columns[1:], class_names=['Reject','Accept'])
+graph = graphviz.Source(dot_data)
+graph.render("test_tree_male")
 
 ###############QUESTION1.3############################
-df_score = df.copy()
+df_score = df_both.copy()
 
 #Calculates score by multiplying the partners score for a certain attribute with the importance of the attribute
 df_score['attribute_score'] = df_score.attr * df_score.attr1_1 + df_score.sinc * df_score.sinc1_1 + df_score.intel * df_score.intel1_1 + df_score.fun * df_score.fun1_1 + df_score.amb * df_score.amb1_1 + df_score.shar * df_score.shar1_1
-df_score['attribute_score']
 
 ###################Females############################
 # Sample containing 80% of females
 femaleTrain_score = df_score[df_score['gender'] == 0].sample(frac=0.8)
-femaleFilter_score = df_score.drop(femaleTrain_score.index)
+femaleFilter_score = df_score[df_score['gender'] == 0].drop(femaleTrain_score.index)
 femaleTrain_score.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
 femaleFilter_score.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
+femaleTrain_score.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
+femaleFilter_score.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
 
 # replace NaN with medians
 femaleTrain_score['age'].fillna(value=femaleTrain_score['age'].median(), inplace=True)
@@ -159,7 +167,7 @@ target_f_score = femaleTrain_score['dec']
 features_f_score = femaleTrain_score.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree_f_score = tree.DecisionTreeClassifier(max_depth=5, min_samples_split=5, min_samples_leaf=50)
+test_tree_f_score = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
 test_tree_f_score = test_tree_f_score.fit(features_f_score, target_f_score)
 
 # Run the tree
@@ -171,12 +179,19 @@ sk.metrics.precision_score(femaleFilter_score['dec'], predictions_f_score)
 sk.metrics.f1_score(femaleFilter_score['dec'], predictions_f_score)
 sk.metrics.classification_report(femaleFilter_score['dec'], predictions_f_score)
 
+# Visualise the tree
+dot_data = tree.export_graphviz(test_tree_f_score, out_file=None, feature_names=femaleTrain_score.columns[1:], class_names=['Reject','Accept'])
+graph = graphviz.Source(dot_data)
+graph.render("test_tree_female_score")
+
 ###################Males##############################
 # Sample containing 80% of males
 maleTrain_score = df_score[df_score['gender'] == 1].sample(frac=0.8)
-maleFilter_score = df_score.drop(maleTrain_score.index)
+maleFilter_score = df_score[df_score['gender'] == 1].drop(maleTrain_score.index)
 maleTrain_score.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
 maleFilter_score.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
+maleTrain_score.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
+maleFilter_score.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
 
 # replace NaN with medians
 maleTrain_score['age'].fillna(value=maleTrain_score['age'].median(), inplace=True)
@@ -194,7 +209,7 @@ target_m_score = maleTrain_score['dec']
 features_m_score = maleTrain_score.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree_m_score = tree.DecisionTreeClassifier(max_depth=5, min_samples_split=5, min_samples_leaf=50)
+test_tree_m_score = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
 test_tree_m_score = test_tree_f_score.fit(features_m_score, target_m_score)
 
 # Run the tree
@@ -205,3 +220,8 @@ sk.metrics.accuracy_score(maleFilter_score['dec'], predictions_m_score, normaliz
 sk.metrics.precision_score(maleFilter_score['dec'], predictions_m_score)
 sk.metrics.f1_score(maleFilter_score['dec'], predictions_m_score)
 sk.metrics.classification_report(maleFilter_score['dec'], predictions_m_score)
+
+# Visualise the tree
+dot_data = tree.export_graphviz(test_tree_m_score, out_file=None, feature_names=maleTrain_score.columns[1:], class_names=['Reject','Accept'])
+graph = graphviz.Source(dot_data)
+graph.render("test_tree_male_score")
