@@ -71,7 +71,7 @@ target = femaleTrain['dec']
 features = femaleTrain.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree = tree.DecisionTreeClassifier(max_depth = 2, min_samples_split = 10)
+test_tree = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
 test_tree = test_tree.fit(features, target)
 
 # Run the tree
@@ -107,7 +107,7 @@ features = maleTrain.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
 # Playing with max_depth and min_samples_split will increase/decrease accuracy
-test_tree = tree.DecisionTreeClassifier(max_depth = 2, min_samples_split = 10)
+test_tree = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
 test_tree = test_tree.fit(features, target)
 
 # Run the tree
@@ -122,7 +122,7 @@ sk.metrics.classification_report(maleFilter['dec'], predictions)
 df_score = df.copy()
 
 #Calculates score by multiplying the partners score for a certain attribute with the importance of the attribute
-df_score['attribute_score'] = df_score.attr*df_score.attr1_1 + df_score.sinc*df_score.sinc1_1 + df_score.intel*df_score.intel1_1 + df_score.fun*df_score.fun1_1 + df_score.amb*df_score.amb1_1 + df_score.shar*df_score.shar1_1
+df_score['attribute_score'] = df_score.attr * df_score.attr1_1 + df_score.sinc * df_score.sinc1_1 + df_score.intel * df_score.intel1_1 + df_score.fun * df_score.fun1_1 + df_score.amb * df_score.amb1_1 + df_score.shar * df_score.shar1_1
 
 ###################Females############################
 # Sample containing 80% of females
@@ -147,7 +147,7 @@ target_f_score = femaleTrain_score['dec']
 features_f_score = femaleTrain_score.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree_f_score = tree.DecisionTreeClassifier(max_depth = 5, min_samples_split = 5, min_samples_leaf = 50)
+test_tree_f_score = tree.DecisionTreeClassifier(max_depth=5, min_samples_split=5, min_samples_leaf=50)
 test_tree_f_score = test_tree_f_score.fit(features_f_score, target_f_score)
 
 # Run the tree
@@ -182,7 +182,7 @@ target_m_score = maleTrain_score['dec']
 features_m_score = maleTrain_score.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree_m_score = tree.DecisionTreeClassifier(max_depth = 5, min_samples_split = 5, min_samples_leaf = 50)
+test_tree_m_score = tree.DecisionTreeClassifier(max_depth=5, min_samples_split=5, min_samples_leaf=50)
 test_tree_m_score = test_tree_f_score.fit(features_m_score, target_m_score)
 
 # Run the tree
