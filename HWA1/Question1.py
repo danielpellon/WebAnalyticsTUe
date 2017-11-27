@@ -19,10 +19,11 @@ df_import['tuition'] = df_import['tuition'].str.replace(',', '')
 # add partner age to the dataframe
 df_partners = df_import.copy()
 df_partners = df_partners.filter(items=['iid', 'age'])
-df_partners.columns = ['pid', 'partner_age']
+#df_partners.columns = ['pid', 'partner_age']
+df_partners.rename(columns={'iid': 'pid', 'age': 'partner_age'}, inplace=True)
 df_partners = df_partners.drop_duplicates()
 df = pd.merge(df_import, df_partners, on=['pid'], how='left')
-
+df
 # generate age matrix
 df_ageMatrix = df[['iid', 'age', 'pid', 'dec', 'partner_age']]
 
@@ -49,11 +50,19 @@ cm = sns.light_palette("orange", as_cmap=True)
 
 ###############QUESTION1.2############################
 ###################Females############################
+# Create new dataframe with partnerdata
+df_partners = df.copy()
+df_partners.columns = 'partner_' + df_partners.columns
+df_partners.rename(columns={'partner_iid': 'pid', 'partner_pid': 'iid'}, inplace=True)
+df_both = pd.merge(df_import, df_partners, on=['pid', 'iid'], how='left')
+
 # Sample containing 80% of females
-femaleTrain = df[df['gender'] == 0].sample(frac=0.8)
-femaleFilter = df.drop(femaleTrain.index)
+femaleTrain = df_both[df_both['gender'] == 0].sample(frac=0.8)
+femaleFilter = df_both.drop(femaleTrain.index)
 femaleTrain.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
 femaleFilter.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
+femaleTrain.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
+femaleFilter.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
 
 # replace NaN with medians
 femaleTrain['age'].fillna(femaleTrain['age'].median(), inplace=True)
@@ -85,10 +94,12 @@ sk.metrics.classification_report(femaleFilter['dec'], predictions)
 
 ###################Males##############################
 # Sample containing 80% of males
-maleTrain = df[df['gender'] == 1].sample(frac=0.8)
-maleFilter = df.drop(maleTrain.index)
+maleTrain = df_both[df_both['gender'] == 1].sample(frac=0.8)
+maleFilter = df_both.drop(maleTrain.index)
 maleTrain.drop(['field', 'undergra', 'from', 'career', 'match'], axis=1, inplace=True)
 maleFilter.drop(['field', 'undergra', 'from', 'career', 'match'], axis=1, inplace=True)
+maleTrain.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
+maleFilter.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
 
 # replace NaN with medians
 maleTrain['age'].fillna(maleTrain['age'].median(), inplace=True)
@@ -123,6 +134,7 @@ df_score = df.copy()
 
 #Calculates score by multiplying the partners score for a certain attribute with the importance of the attribute
 df_score['attribute_score'] = df_score.attr * df_score.attr1_1 + df_score.sinc * df_score.sinc1_1 + df_score.intel * df_score.intel1_1 + df_score.fun * df_score.fun1_1 + df_score.amb * df_score.amb1_1 + df_score.shar * df_score.shar1_1
+df_score['attribute_score']
 
 ###################Females############################
 # Sample containing 80% of females
