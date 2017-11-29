@@ -9,23 +9,34 @@ import graphviz
 
 csvpath = "speed_dating_assignment.csv"
 df_import = pd.read_csv(csvpath)
-# df_import.replace(to_replace=',', value='', inplace=True)
+# Reformat numbers to remove commas
 df_import['zipcode'] = df_import['zipcode'].str.replace(',', '')
 df_import['income'] = df_import['income'].str.replace(',', '')
 df_import['mn_sat'] = df_import['mn_sat'].str.replace(',', '')
 df_import['tuition'] = df_import['tuition'].str.replace(',', '')
 
-###############QUESTION1.1############################
-# add partner age to the dataframe
-df_partners = df_import.copy()
-df_partners = df_partners.filter(items=['iid', 'age'])
-#df_partners.columns = ['pid', 'partner_age']
-df_partners.rename(columns={'iid': 'pid', 'age': 'partner_age'}, inplace=True)
-df_partners = df_partners.drop_duplicates()
-df = pd.merge(df_import, df_partners, on=['pid'], how='left')
+# Build a dataframe that only includes the attributes known on beforehand
+# Only select attributes that are known before the date
+df_filtered = df_import.loc[:, :'dec']
+# Remove irrelevant and string-based attributes
+df_filtered.drop(['id', 'idg', 'partner', 'undergra', 'field', 'from', 'career', 'match'], axis=1, inplace=True)
 
+# add partner age to the dataframe
+df_partners = df_filtered.copy()
+# df_partners = df_partners.filter(items=['iid', 'age'])
+df_partners.columns = 'partner_' + df_partners.columns
+df_partners.rename(columns={'partner_iid': 'pid'}, inplace=True)
+df_partners.drop_duplicates(subset=['pid'], inplace=True)
+df_partners.drop(['partner_dec'], axis=1, inplace=True)
+df_both = pd.merge(df_filtered, df_partners, on=['pid'], how='left')
+
+# pd.set_option('display.max_columns', None)
+# df.head()
+# df.describe()
+
+###############QUESTION1.1############################
 # generate age matrix
-df_ageMatrix = df[['iid', 'age', 'pid', 'dec', 'partner_age']]
+df_ageMatrix = df_both[['iid', 'age', 'pid', 'dec', 'partner_age']]
 
 # Function to format cells for the heatmap
 def format_cells(x):
@@ -34,7 +45,7 @@ def format_cells(x):
     return "{:.0%}".format(x)
 
 # build a matrix with age (rows) and partner age (columns); decision rate is shown in cells
-matrix = pd.pivot_table(df, values='dec', index='age', columns='partner_age')
+matrix = pd.pivot_table(df_ageMatrix, values='dec', index='age', columns='partner_age')
 
 #Running this line for me throws an error, but matrix still works .daniel
 cm = sns.light_palette("orange", as_cmap=True)
@@ -45,28 +56,14 @@ cm = sns.light_palette("orange", as_cmap=True)
  )
 
 ###############QUESTION1.2############################
-# Create new dataframe with partnerdata
-df_partners = df.copy()
-df_partners.columns = 'partner_' + df_partners.columns
-df_partners.rename(columns={'partner_iid': 'pid', 'partner_pid': 'iid'}, inplace=True)
-df_both = pd.merge(df_import, df_partners, on=['pid', 'iid'], how='left')
-
 ###################Females############################
 # Sample containing 80% of females
 femaleTrain = df_both[df_both['gender'] == 0].sample(frac=0.8)
 femaleFilter = df_both[df_both['gender'] == 0].drop(femaleTrain.index)
-femaleTrain.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
-femaleFilter.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
-femaleTrain.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
-femaleFilter.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
 
 # replace NaN with medians
-femaleTrain['age'].fillna(femaleTrain['age'].median(), inplace=True)
-femaleTrain['round'].fillna(femaleTrain['round'].median(), inplace=True)
-femaleFilter['age'].fillna(value=femaleFilter['age'].median(), inplace=True)
-femaleFilter['round'].fillna(value=femaleFilter['round'].median(), inplace=True)
-femaleTrain.fillna(0, inplace=True)
-femaleFilter.fillna(0, inplace=True)
+femaleTrain.fillna(value=femaleTrain.median(), inplace=True)
+femaleFilter.fillna(value=femaleFilter.median(), inplace=True)
 
 # Create femaleTest: a dataframe for the test without the results
 femaleTest = femaleFilter.drop(['dec'], axis=1)
@@ -76,7 +73,7 @@ target_f = femaleTrain['dec']
 features_f = femaleTrain.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree_f = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
+test_tree_f = tree.DecisionTreeClassifier(max_depth=4, min_samples_split=10)
 test_tree_f = test_tree_f.fit(features_f, target_f)
 
 # Run the tree
@@ -86,7 +83,6 @@ predictions_f = test_tree_f.predict(femaleTest)
 sk.metrics.accuracy_score(femaleFilter['dec'], predictions_f, normalize=True)
 sk.metrics.precision_score(femaleFilter['dec'], predictions_f)
 sk.metrics.f1_score(femaleFilter['dec'], predictions_f)
-sk.metrics.classification_report(femaleFilter['dec'], predictions_f)
 
 # Visualise the tree
 dot_data = tree.export_graphviz(test_tree_f, out_file=None, feature_names=femaleTrain.columns[1:], class_names=['Reject','Accept'])
@@ -97,18 +93,10 @@ graph.render("test_tree_female")
 # Sample containing 80% of males
 maleTrain = df_both[df_both['gender'] == 1].sample(frac=0.8)
 maleFilter = df_both[df_both['gender'] == 1].drop(maleTrain.index)
-maleTrain.drop(['field', 'undergra', 'from', 'career', 'match'], axis=1, inplace=True)
-maleFilter.drop(['field', 'undergra', 'from', 'career', 'match'], axis=1, inplace=True)
-maleTrain.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
-maleFilter.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
 
 # replace NaN with medians
-maleTrain['age'].fillna(maleTrain['age'].median(), inplace=True)
-maleTrain['round'].fillna(maleTrain['round'].median(), inplace=True)
-maleFilter['age'].fillna(value=maleFilter['age'].median(), inplace=True)
-maleFilter['round'].fillna(value=maleFilter['round'].median(), inplace=True)
-maleTrain.fillna(0, inplace=True)
-maleFilter.fillna(0, inplace=True)
+maleTrain.fillna(value=maleTrain.median(), inplace=True)
+maleFilter.fillna(value=maleFilter.median(), inplace=True)
 
 # Create maleTest: a dataframe for the test without the results
 maleTest = maleFilter.drop(['dec'], axis=1)
@@ -119,7 +107,7 @@ features_m = maleTrain.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
 # Playing with max_depth and min_samples_split will increase/decrease accuracy
-test_tree_m = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
+test_tree_m = tree.DecisionTreeClassifier(max_depth=4, min_samples_split=10)
 test_tree_m = test_tree_m.fit(features_m, target_m)
 
 # Run the tree
@@ -129,7 +117,6 @@ predictions_m = test_tree_m.predict(maleTest)
 sk.metrics.accuracy_score(maleFilter['dec'], predictions_m, normalize=True)
 sk.metrics.precision_score(maleFilter['dec'], predictions_m)
 sk.metrics.f1_score(maleFilter['dec'], predictions_m)
-sk.metrics.classification_report(maleFilter['dec'], predictions_m)
 
 # Visualise the tree
 dot_data = tree.export_graphviz(test_tree_m, out_file=None, feature_names=maleTrain.columns[1:], class_names=['Reject','Accept'])
@@ -140,24 +127,15 @@ graph.render("test_tree_male")
 df_score = df_both.copy()
 
 #Calculates score by multiplying the partners score for a certain attribute with the importance of the attribute
-df_score['attribute_score'] = df_score.attr * df_score.attr1_1 + df_score.sinc * df_score.sinc1_1 + df_score.intel * df_score.intel1_1 + df_score.fun * df_score.fun1_1 + df_score.amb * df_score.amb1_1 + df_score.shar * df_score.shar1_1
-
+df_score['attribute_score'] = df_score.partner_attr3_1 * df_score.attr1_1 + df_score.partner_sinc3_1 * df_score.sinc1_1 + df_score.partner_intel3_1 * df_score.intel1_1 + df_score.partner_fun3_1 * df_score.fun1_1 + df_score.partner_amb3_1 * df_score.amb1_1
 ###################Females############################
 # Sample containing 80% of females
 femaleTrain_score = df_score[df_score['gender'] == 0].sample(frac=0.8)
 femaleFilter_score = df_score[df_score['gender'] == 0].drop(femaleTrain_score.index)
-femaleTrain_score.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
-femaleFilter_score.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
-femaleTrain_score.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
-femaleFilter_score.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
 
 # replace NaN with medians
-femaleTrain_score['age'].fillna(value=femaleTrain_score['age'].median(), inplace=True)
-femaleTrain_score['round'].fillna(value=femaleTrain_score['round'].median(), inplace=True)
-femaleFilter_score['age'].fillna(value=femaleFilter_score['age'].median(), inplace=True)
-femaleFilter_score['round'].fillna(value=femaleFilter_score['round'].median(), inplace=True)
-femaleTrain_score.fillna(0, inplace=True)
-femaleFilter_score.fillna(0, inplace=True)
+femaleTrain_score.fillna(femaleTrain_score.median(), inplace=True)
+femaleFilter_score.fillna(femaleFilter_score.median(), inplace=True)
 
 # Create femaleTest_score: a dataframe for the test without the results
 femaleTest_score = femaleFilter_score.drop(['dec'], axis=1)
@@ -167,7 +145,7 @@ target_f_score = femaleTrain_score['dec']
 features_f_score = femaleTrain_score.drop(['dec'], axis=1).values
 
 # Here is where we will controll things such as overfitting
-test_tree_f_score = tree.DecisionTreeClassifier(max_depth=2, min_samples_split=10)
+test_tree_f_score = tree.DecisionTreeClassifier(max_depth=4, min_samples_split=10)
 test_tree_f_score = test_tree_f_score.fit(features_f_score, target_f_score)
 
 # Run the tree
@@ -177,7 +155,6 @@ predictions_f_score = test_tree_f_score.predict(femaleTest_score)
 sk.metrics.accuracy_score(femaleFilter_score['dec'], predictions_f_score, normalize=True)
 sk.metrics.precision_score(femaleFilter_score['dec'], predictions_f_score)
 sk.metrics.f1_score(femaleFilter_score['dec'], predictions_f_score)
-sk.metrics.classification_report(femaleFilter_score['dec'], predictions_f_score)
 
 # Visualise the tree
 dot_data = tree.export_graphviz(test_tree_f_score, out_file=None, feature_names=femaleTrain_score.columns[1:], class_names=['Reject','Accept'])
@@ -188,18 +165,10 @@ graph.render("test_tree_female_score")
 # Sample containing 80% of males
 maleTrain_score = df_score[df_score['gender'] == 1].sample(frac=0.8)
 maleFilter_score = df_score[df_score['gender'] == 1].drop(maleTrain_score.index)
-maleTrain_score.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
-maleFilter_score.drop(['field', 'undergra', 'from', 'career', 'match', 'career_c'], axis=1, inplace=True)
-maleTrain_score.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
-maleFilter_score.drop(['partner_field', 'partner_undergra', 'partner_from', 'partner_career', 'partner_match', 'partner_career_c', 'partner_dec'], axis=1, inplace=True)
 
 # replace NaN with medians
-maleTrain_score['age'].fillna(value=maleTrain_score['age'].median(), inplace=True)
-maleTrain_score['round'].fillna(value=maleTrain_score['round'].median(), inplace=True)
-maleFilter_score['age'].fillna(value=maleFilter_score['age'].median(), inplace=True)
-maleFilter_score['round'].fillna(value=maleFilter_score['round'].median(), inplace=True)
-maleTrain_score.fillna(0, inplace=True)
-maleFilter_score.fillna(0, inplace=True)
+maleTrain_score.fillna(maleTrain_score.median(), inplace=True)
+maleFilter_score.fillna(maleFilter_score.median(), inplace=True)
 
 # Create maleTest_score: a dataframe for the test without the results
 maleTest_score = maleFilter_score.drop(['dec'], axis=1)
@@ -219,7 +188,6 @@ predictions_m_score = test_tree_m_score.predict(maleTest_score)
 sk.metrics.accuracy_score(maleFilter_score['dec'], predictions_m_score, normalize=True)
 sk.metrics.precision_score(maleFilter_score['dec'], predictions_m_score)
 sk.metrics.f1_score(maleFilter_score['dec'], predictions_m_score)
-sk.metrics.classification_report(maleFilter_score['dec'], predictions_m_score)
 
 # Visualise the tree
 dot_data = tree.export_graphviz(test_tree_m_score, out_file=None, feature_names=maleTrain_score.columns[1:], class_names=['Reject','Accept'])
